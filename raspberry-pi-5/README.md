@@ -53,7 +53,8 @@ Click **Next** > **Edit Settings** and configure:
   - Find and install **OpenSSH Client**
 
   **Generate an SSH key pair** (Windows, macOS, or Linux):
-  1. Open your terminal and run:  
+  1. Open your terminal and run:
+     
      ```bash
      ssh-keygen -t ed25519
      ```
@@ -75,27 +76,76 @@ Click **Next** > **Edit Settings** and configure:
 Click **Save**, then confirm **Yes** twice. Wait for the writing and verification process to complete.  
 Once finished, connect your Pi to power and network — it will be ready for SSH access.
 
-### 2. Ssh into the rpi
+### 2. Log in with SSH
 
-Now that the rpi is booting, its time to log in (give it a moment). Open your preffered terminal (or should i say shell) and ssh in with the command "ssh", followed by the hostname of the device. in my case, it's "ssh rpi5", since i named it that during the install. also, i dont have to specify the username because ssh assumes to use the username of the user executing the command. if using a different username on the system, simply prefix the hostname with "username@", with a full command looking like "ssh username@rpi5"
+Once the Pi finishes booting, open your terminal/shell.
 
-It will indicate that youve logged in after entering the password by saying a bunch of stuff about linux and giving you a "user@rpi5:~ $" to type in a command. You can update the system and its packages to the latest version in one command by typing "sudo apt update -y && sudo apt upgrade -y", and promptly typing in the password (not the ssh password, but the password you set during imaging).
+- If you set your username to be the same, log in with:
+  
+  ```bash
+  ssh rpi5
+  ```
 
-### 3. Install docker and portainer
+- Or if it differs, log in with:
 
-Our first thing we'll install is docker, and based on docker's installation instructions (https://docs.docker.com/engine/install/debian/), we will be using the debian image (since the one labelled raspberry pi os/raspbian is for older rpis / rpi operating systems. Basically, paste this into your console and press y and enter when prompted, and log back in after:
+  ```bash
+  ssh username@rpi5
+  ```
 
-sudo apt-get update
-sudo apt-get install ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo groupadd docker
-sudo usermod -aG docker $USER
-logout
+If needed enter your **SSH key password**.
+
+If you successfully log in, your terminal will show a prompt like:
+
+  ```ruby
+  username@rpi5:~$
+  ```
+
+You can easily pull new updates and upgrade your packages in one command with the password you set in the **Raspberry Pi Imager**:
+
+  ```bash
+  sudo apt update -y && sudo apt upgrade -y
+  ```
+
+**(Optional)**: If your running an NVMe SSD that connects through the PCIe 2.0 x1 interface with a [dedicated M.2 HAT](https://www.microcenter.com/product/671943/5), you can possibly increase the speeds of your drive by enabling PCIe 3.0:
+
+  - Enter the Raspberry Pi config with:
+
+      ```bash
+      sudo raspi-config
+      ```
+
+  - Using the arrow keys and ```Enter```, navigate to **Advanced Options > PCIe Speed** and choose ```<Yes>```, ```<Ok>```, and ```<Finish>```.
+
+### 3. Install DockerCE and Portainer
+
+We'll install DockerCE to host our services locally, using the Debian repository [as instructed by Docker](https://docs.docker.com/engine/install/debian/).
+
+- It consists of pasting a bunch of code into your terminal, and confirming some commands by entering **y**, then logging back in (with SSH):
+
+  ```bash
+  sudo apt-get update
+  sudo apt-get install ca-certificates curl
+  sudo install -m 0755 -d /etc/apt/keyrings
+  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt-get update
+  sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo groupadd docker
+  sudo usermod -aG docker $USER
+  logout
+  ```
+Portainer is the Docker container that hosts a beginner-friendly web UI to manage everything Docker.
+
+- It can be created with one simple command:
+
+  ```bash
+  docker run -d --name portainer -p 1100:9000 --restart always -v /var/run/docker.sock:/var/run/docker.sock -v portainer:/data portainer/portainer-ce:lts
+  ```
+
+Now, the Portainer service should be accessible on your local network at [http://rpi5:1100](http://rpi5:1100).
+
+Create a username and password, then log in. 
