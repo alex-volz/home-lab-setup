@@ -116,6 +116,12 @@ You can easily pull new updates and upgrade your packages in one command with th
 
   - Using the arrow keys and ```Enter```, navigate to **Advanced Options > PCIe Speed** and choose ```<Yes>```, ```<Ok>```, and ```<Finish>```.
 
+Its a good time to mention that you should reserve a DHCP IP address for your Pi within your [Routers settings](http://192.168.86.1/) so that you can always reach it at the same address.
+
+Once you've assigned your Pi it's own address on your network, see if its using it by typing ```ip addr``` and checking the list.
+
+If it doesn't show the IP you set, try shutting down the Pi with ```sudo systemctl poweroff``` for a couple minutes and then turning it back on, so your router forgets it and reassigns it to the proper address.
+
 ### 3. Install DockerCE and Portainer
 
 We'll install DockerCE to host our services locally, using the Debian repository [as instructed by Docker](https://docs.docker.com/engine/install/debian/).
@@ -138,7 +144,7 @@ We'll install DockerCE to host our services locally, using the Debian repository
   sudo usermod -aG docker $USER
   logout
   ```
-Portainer is the Docker container that hosts a beginner-friendly web UI to manage everything Docker.
+Portainer is a Docker container that hosts a beginner-friendly web UI to manage everything Docker.
 
 - It can be created with one simple command:
 
@@ -148,4 +154,10 @@ Portainer is the Docker container that hosts a beginner-friendly web UI to manag
 
 Now, the Portainer service should be accessible on your local network at [http://rpi5:1100](http://rpi5:1100).
 
-Create a username and password, then log in. 
+Create a username and password (and optionally disable anayltics), then log in. 
+
+### 3. Create the main container stack
+
+Finally, we have an easily workable container environment we can deploy services to.
+
+```TO BE CONTINUED ```
