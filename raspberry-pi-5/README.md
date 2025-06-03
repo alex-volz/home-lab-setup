@@ -116,7 +116,7 @@ You can easily pull new updates and upgrade your packages in one command with th
 
   - Using the arrow keys and ```Enter```, navigate to **Advanced Options > PCIe Speed** and choose ```<Yes>```, ```<Ok>```, and ```<Finish>```.
 
-Its a good time to mention that you should reserve a DHCP IP address for your Pi within your [Routers settings](http://192.168.86.1/) so that you can always reach it at the same address.
+Its a good time to mention that you should reserve a DHCP IP address for your Pi within your [Routers settings](http://192.168.1.1/) so that you can always reach it at the same address.
 
 Once you've assigned your Pi it's own address on your network, see if its using it by typing ```ip addr``` and checking the list.
 
