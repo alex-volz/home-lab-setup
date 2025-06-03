@@ -7,19 +7,19 @@
 This guide details the process of hosting multiple services in Docker containers, starting from OS imaging.  
 Here’s an overview of the services included in this stack:
 
-- **Pi-hole** — DNS sinkhole and ad blocker  
-- **Samba** — File sharing server (Windows-compatible NAS)  
-- **Tailscale** — Secure remote network access  
-- **Traefik** — Reverse proxy with Cloudflare DNS and HTTPS encryption  
-- **Vaultwarden** — Self-hosted password vault (Bitwarden-compatible)  
-- **Watchtower** — Automated container updates  
+- **Pi-hole**: DNS sinkhole and ad blocker  
+- **Samba**: File sharing server (Windows-compatible NAS)  
+- **Tailscale**: Secure remote network access  
+- **Traefik**: Reverse proxy with Cloudflare DNS and HTTPS encryption  
+- **Vaultwarden**: Self-hosted password vault (Bitwarden compatible)  
+- **Watchtower**: Automated container updates  
 
 ## Prerequisites
 
 - **Raspberry Pi 5** (recommended 8GB RAM model)
-- **32GB or larger** SD card *(or preferably SSD)*  
+- **32GB or larger** SD card *(and preferably an SSD for the operating system)*  
 - A Mac/Windows/Linux machine with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) installed  
-  (with SD/SSD interface available)  
+  (with SD card interface available)  
 - *(Optional)* Your own domain **domain** (for HTTPS and remote access)
 
 ## Setup
