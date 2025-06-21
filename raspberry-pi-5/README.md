@@ -4,160 +4,381 @@
 
 ## Description
 
-This guide details the process of hosting multiple services in Docker containers, starting from OS imaging.  
+This guide details the process of hosting multiple services in Docker containers, starting from OS imaging.
 Here’s an overview of the services included in this stack:
 
-- **Pi-hole**: DNS sinkhole and ad blocker  
-- **Samba**: File sharing server (Windows-compatible NAS)  
-- **Tailscale**: Secure remote network access  
-- **Traefik**: Reverse proxy with Cloudflare DNS and HTTPS encryption  
-- **Vaultwarden**: Self-hosted password vault (Bitwarden compatible)  
-- **Watchtower**: Automated container updates  
+* **Pi-hole**: DNS sinkhole and ad blocker
+* **Samba**: File sharing server (Windows-compatible NAS)
+* **Tailscale**: Secure remote network access
+* **Traefik**: Reverse proxy with Cloudflare DNS and HTTPS encryption
+* **Vaultwarden**: Self-hosted password vault (Bitwarden compatible)
+* **Watchtower**: Automated container updates
+
+> **!!!** Keep in mind that you may require different container configuration for your setup, and it is highly recommended you understand each service by reading their documentation.
+
+*This guide is a reference for a working configuration. Some Googling likely required.*
 
 ## Prerequisites
 
-- **Raspberry Pi 5** (recommended 8GB RAM model)
-- **32GB or larger** SD card *(and preferably an SSD for the operating system)*  
-- A Mac/Windows/Linux machine with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) installed  
-  (with SD card interface available)  
-- *(Optional)* Your own domain **domain** (for HTTPS and remote access)
+* **Raspberry Pi 5** (8 GB or more RAM model recommended)
+* **32 GB or larger** SD card *(or NVMe SSD + HAT)* for the OS
+* A Mac/Windows/Linux machine with [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+* Your own **domain** (this guide uses Cloudflare DNS; adapt as needed)
 
 ## Setup
 
 ### 1. Image the operating system
 
-Open **Raspberry Pi Imager** on your Mac, Windows, or Linux machine:
+1. Open **Raspberry Pi Imager**.
+2. **CHOOSE DEVICE**: `Raspberry Pi 5`
+3. **CHOOSE OS**: `Raspberry Pi OS (other) > Raspberry Pi OS Lite (64-bit)`
+4. **CHOOSE STORAGE**: Select your SD card or SSD
 
-- **CHOOSE DEVICE**: `Raspberry Pi 5`
-- **CHOOSE OS**: `Raspberry Pi OS (other) > Raspberry Pi OS Lite (64-bit)`
-- **CHOOSE STORAGE**: Insert your SD card or SSD and select it
-
-Click **Next** > **Edit Settings** and configure:
+Click **Next** → **Edit Settings**:
 
 #### General
-- Set **Hostname** to `rpi5` (or your preferred name) — remember this for later
-- Set **Username** *(recommend using your PC’s username for consistency)* and set a strong password
-- *(Optional)* Configure **Wireless LAN** — but a **wired connection** is recommended for stability
-- Set **Locale settings** (timezone, keyboard layout, etc.)
+
+* **Hostname**: `rpi5` (or your preferred)
+* **Username**: *(recommend your PC username for consistency)*
+* **Password**: strong password
+* *(Optional)* **Wireless LAN**: configure if needed; **wired** recommended
+* **Locale settings**: timezone, keyboard layout, etc.
 
 #### Services
-- **Enable SSH**  
-  *(Recommended: Select “Allow public-key authentication only”)*
 
-  Instead of logging in with just a password, you can secure SSH access using a key pair generated on your computer.
+* **Enable SSH**
 
-  **On Windows**:  
-  Ensure the built-in SSH client is enabled:  
-  - Open **Settings > System > Optional Features**
-  - Click **View features**
-  - Find and install **OpenSSH Client**
+  * Choose **Allow public-key authentication only**
+  * **Paste your public key** under **Set authorized\_keys for 'Username'**
 
-  **Generate an SSH key pair** (Windows, macOS, or Linux):
-  1. Open your terminal and run:
-     
-     ```bash
-     ssh-keygen -t ed25519
-     ```
-  2. When prompted for **"Enter file in which to save the key"**, press **Enter** to accept the default path.
-  3. *(Recommended)* Set a passphrase when prompted with **"Enter passphrase"** for extra security.
+  **On Windows**:
 
-  Once generated, navigate to your `.ssh` directory:  
-  - On Windows: `C:\Users\YourName\.ssh`  
-  - On macOS/Linux: `~/.ssh`  
+  1. Go to **Settings > System > Optional Features** → **Add a feature**
+  2. Install **OpenSSH Client**
 
-  Open the file ending with `.pub` — this is your **public key**.
+  **Generate SSH key pair** (Windows/macOS/Linux):
 
-  Copy the entire contents of the `.pub` file. Then, in **Raspberry Pi Imager** under:  
-  > **Set authorized_keys for 'Username'**
+  ```bash
+  ssh-keygen -t ed25519
+  ```
 
-  Paste your public key here.  
-  This links your Pi to your private key, enabling secure login **only from computers where your private key (the other file) is stored**.
+  * Press **Enter** to accept default path
+  * *(Optional)* set a passphrase
 
-Click **Save**, then confirm **Yes** twice. Wait for the writing and verification process to complete.  
-Once finished, connect your Pi to power and network — it will be ready for SSH access.
+  Find your public key:
+
+  * **Windows**: `C:\Users\YourName\.ssh\id_ed25519.pub`
+  * **macOS/Linux**: `~/.ssh/id_ed25519.pub`
+
+  Copy its contents, paste into Imager’s **authorized\_keys** field.
+
+Click **Save**, then confirm **Yes** twice. Wait for imaging to complete. Power on the Pi and connect it to the network.
+
+---
 
 ### 2. Log in with SSH
 
-Once the Pi finishes booting, open your terminal/shell.
+1. In your terminal:
 
-- If you set your username to be the same, log in with:
-  
-  ```bash
-  ssh rpi5
-  ```
+   ```bash
+   ssh username@rpi5
+   # or if same name:
+   ssh rpi5
+   ```
+2. Enter your SSH key passphrase (if set).
 
-- Or if it differs, log in with:
+Once in, update and upgrade packages:
 
-  ```bash
-  ssh username@rpi5
-  ```
+```bash
+sudo apt update -y && sudo apt upgrade -y
+```
 
-If needed enter your **SSH key password**.
+> **Optional: NVMe HAT performance**
+>
+> 1. ```bash
+>    sudo raspi-config
+>    ```
+> 2. Navigate: **Advanced Options > PCIe Speed** → **Yes**, **Ok**, **Finish**
 
-If you successfully log in, your terminal will show a prompt like:
+Reserve a static DHCP IP for your Pi in your router settings (e.g., `http://192.168.1.1`).
+Verify with:
 
-  ```ruby
-  username@rpi5:~$
-  ```
+```bash
+ip addr
+```
 
-You can easily pull new updates and upgrade your packages in one command with the password you set in the **Raspberry Pi Imager**:
+If it doesn’t match, power off (`sudo systemctl poweroff`) for \~2 minutes, then power on again.
 
-  ```bash
-  sudo apt update -y && sudo apt upgrade -y
-  ```
+---
 
-**(Optional)**: If your running an NVMe SSD that connects through the PCIe 2.0 x1 interface with a [dedicated M.2 HAT](https://www.microcenter.com/product/671943/5), you can possibly increase the speeds of your drive by enabling PCIe 3.0:
+### 3. Install Docker CE & Portainer
 
-  - Enter the Raspberry Pi config with:
+Follow [Docker’s Debian install instructions](https://docs.docker.com/engine/install/debian/):
 
-      ```bash
-      sudo raspi-config
-      ```
+```bash
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo groupadd docker
+sudo usermod -aG docker $USER
+logout
+```
 
-  - Using the arrow keys and ```Enter```, navigate to **Advanced Options > PCIe Speed** and choose ```<Yes>```, ```<Ok>```, and ```<Finish>```.
+Re-SSH in, then install Portainer:
 
-Its a good time to mention that you should reserve a DHCP IP address for your Pi within your [Routers settings](http://192.168.1.1/) so that you can always reach it at the same address.
+```bash
+docker run -d \
+  --name portainer \
+  -p 1200:9000 \
+  --restart always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer:/data \
+  portainer/portainer-ce:lts
+```
 
-Once you've assigned your Pi it's own address on your network, see if its using it by typing ```ip addr``` and checking the list.
+Access at [http://rpi5:1200](http://rpi5:1200) or `http://<Pi_IP>:1200`. Create admin user and optionally disable analytics.
 
-If it doesn't show the IP you set, try shutting down the Pi with ```sudo systemctl poweroff``` for a couple minutes and then turning it back on, so your router forgets it and reassigns it to the proper address.
+---
 
-### 3. Install DockerCE and Portainer
+### 4. Create the main container stack
 
-We'll install DockerCE to host our services locally, using the Debian repository [as instructed by Docker](https://docs.docker.com/engine/install/debian/).
+1. In Portainer: **Live connect** → **Stacks** → **Add stack**
+2. **Name** your stack (e.g., `server-stack`).
+3. **Load variables** from `.env` file.
+4. **Paste** the `docker-compose.yml` into the Web editor:
 
-- It consists of pasting a bunch of code into your terminal, and confirming some commands by entering **y**, then logging back in (with SSH):
+```yaml
+services:
+  homepage:
+    container_name: homepage
+    image: ghcr.io/gethomepage/homepage:latest
+    volumes:
+      - /home/alexg/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: hp.${DOMAIN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hp.rule=Host(`hp.${DOMAIN}`)"
+      - "traefik.http.routers.hp.entrypoints=websecure"
+      - "traefik.http.routers.hp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hp.loadbalancer.server.port=3000"
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+    environment:
+      TZ: '${TIMEZONE}'
+      FTLCONF_webserver_api_password: '${PIHOLE_PASSWORD}'
+      FTLCONF_dns_listeningMode: 'all'
+    volumes:
+      - pihole:/etc/pihole
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ph.rule=Host(`ph.${DOMAIN}`)"
+      - "traefik.http.routers.ph.entrypoints=websecure"
+      - "traefik.http.routers.ph.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ph.loadbalancer.server.port=80"
+  samba:
+    container_name: samba
+    image: ghcr.io/servercontainers/samba:latest
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - CAP_NET_ADMIN
+    environment:
+      SAMBA_CONF_LOG_LEVEL: 3
+      AVAHI_DISABLE: 1
+      ACCOUNT_${SAMBA_USERNAME_1}: "${SAMBA_PASSWORD_1}"
+      UID_${SAMBA_USERNAME_1}: 1000
+      ACCOUNT_${SAMBA_USERNAME_2}: "${SAMBA_PASSWORD_2}"
+      UID_family: 1001
+      SAMBA_VOLUME_CONFIG_share: "[${SAMBA_USERNAME_1}]; path=/shares/${SAMBA_USERNAME_1}; valid users = ${SAMBA_USERNAME_1}; writeable = yes; write list = ${SAMBA_USERNAME_1}; create mask = 0775; directory mask = 0775"
+      SAMBA_VOLUME_CONFIG_family: "[${SAMBA_USERNAME_2}]; path=/shares/${SAMBA_USERNAME_2}; valid users = ${SAMBA_USERNAME_1}, ${SAMBA_USERNAME_2}; force user = ${SAMBA_USERNAME_2}; writeable = yes; write list = ${SAMBA_USERNAME_2}; create mask = 0774; directory mask = 0774"
+      SAMBA_VOLUME_CONFIG_${SAMBA_USERNAME_2}r: "[${SAMBA_USERNAME_2} - Read Only]; path=/shares/${SAMBA_USERNAME_2}; guest ok = yes"
+    volumes:
+      - /shares:/shares
+      - /shares/${SAMBA_USERNAME_1}:/shares/${SAMBA_USERNAME_1}
+      - /shares/${SAMBA_USERNAME_2}:/shares/${SAMBA_USERNAME_2}
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    environment:
+      - TS_HOSTNAME=rpi5
+      - TS_AUTHKEY=${TAILSCALE_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false # Optional: force kernel-based networking; userspace fallback if not supported
+      - TS_ROUTES=${SUBNET}
+      - TS_EXTRA_ARGS=--advertise-exit-node
+    volumes:
+      - tailscale:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+    network_mode: host
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik:/letsencrypt
+    command:
+      - "--api=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.email=${CLOUDFLARE_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tf.rule=Host(`tf.${DOMAIN}`)"
+      - "traefik.http.routers.tf.service=api@internal"
+      - "traefik.http.routers.tf.entrypoints=websecure"
+      - "traefik.http.routers.tf.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tf.loadbalancer.server.port=8080"
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+#      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN}
+      - SIGNUPS_ALLOWED=false
+      - INVITATIONS_ALLOWED=false
+    volumes:
+      - vaultwarden:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vw.rule=Host(`vw.${DOMAIN}`)"
+      - "traefik.http.routers.vw.entrypoints=websecure"
+      - "traefik.http.routers.vw.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vw.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.monitor-only=true"
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${NOTIFICATION_EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${NOTIFICATION_EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=smtp.gmail.com
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=587
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${NOTIFICATION_EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${GMAIL_APP_PASSWORD}
+      - WATCHTOWER_CLEANUP=true
+volumes:
+  pihole:
+  tailscale:
+  traefik:
+  vaultwarden:
+```
 
-  ```bash
-  sudo apt-get update
-  sudo apt-get install ca-certificates curl
-  sudo install -m 0755 -d /etc/apt/keyrings
-  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-  sudo chmod a+r /etc/apt/keyrings/docker.asc
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  sudo apt-get update
-  sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  sudo groupadd docker
-  sudo usermod -aG docker $USER
-  logout
-  ```
-Portainer is a Docker container that hosts a beginner-friendly web UI to manage everything Docker.
+5. Click **Deploy the stack**.
 
-- It can be created with one simple command:
+---
 
-  ```bash
-  docker run -d --name portainer -p 1100:9000 --restart always -v /var/run/docker.sock:/var/run/docker.sock -v portainer:/data portainer/portainer-ce:lts
-  ```
+## `.env` File
 
-Now, the Portainer service should be accessible on your local network at [http://rpi5:1100](http://rpi5:1100).
+```env
+#Your domain that points to your Raspberry Pi 5's IP
+DOMAIN=yourdomain.com
 
-Create a username and password (and optionally disable anayltics), then log in. 
+#Your timezone (TZ database standard)
+TIMEZONE=America/New_York
 
-### 3. Create the main container stack
+#A password for the Pihole dashboard
+PIHOLE_PASSWORD=password
 
-Finally, we have an easily workable container environment we can deploy services to.
+#Usernames/passwords for 2 Samba shares
+SAMBA_USERNAME_1=username1
+SAMBA_PASSWORD_1=password1
+SAMBA_USERNAME_2=username2
+SAMBA_PASSWORD_2=password2
 
-```TO BE CONTINUED ```
+#Tailscale auth key (tskey-...)
+TAILSCALE_KEY=authkey
+
+#Local subnet for routing
+SUBNET=192.168.1.0/24
+
+#Cloudflare API token & email
+CLOUDFLARE_TOKEN=abcdefghijklmnopqrstuvwxyz
+CLOUDFLARE_EMAIL=account@emailprovider.com
+
+#Vaultwarden admin token
+VAULTWARDEN_ADMIN=password
+
+#Email for Watchtower notifications
+NOTIFICATION_EMAIL=account@gmail.com
+
+#Gmail app password for SMTP
+GMAIL_APP_PASSWORD=password
+```
+
+*Refer to comments for explanations of each variable.*
+
+---
+
+## Post-Deployment Tasks
+
+1. **Portainer via Traefik (HTTPS):**
+
+   ```bash
+   docker stop portainer && docker rm portainer
+   docker run -d --name portainer -p 1200:9000 \
+     --restart always --network server_default \
+     -v /var/run/docker.sock:/var/run/docker.sock \
+     -v portainer:/data \
+     -l "traefik.enable=true" \
+     -l "traefik.http.routers.pt.rule=Host(`pt.${DOMAIN}`)" \
+     -l "traefik.http.routers.pt.entrypoints=websecure" \
+     -l "traefik.http.routers.pt.tls.certresolver=letsencrypt" \
+     -l "traefik.http.services.pt.loadbalancer.server.port=9000" \
+     portainer/portainer-ce:lts
+   ```
+
+2. **Tailscale Admin:** disable key expiry, approve subnet routes.
+
+3. **Pi-hole UI:** visit `ph.${DOMAIN}`, block domains.
+
+4. **Vaultwarden:** uncomment `ADMIN_TOKEN`, set `SIGNUPS_ALLOWED=true`, visit `vw.${DOMAIN}`, create account, then revert settings and remove token:
+
+   ```bash
+   sed -i '/"admin_token":/d' /data/config.json
+   ```
+
+5. **Samba Permissions:**
+
+   ```bash
+   sudo useradd username1 && sudo useradd username2
+   sudo chown -R username1 /shares/username1
+   sudo chown -R username2 /shares/username2
+   ```
+
+> You now have a fully functional, multi-service Raspberry Pi 5 server.
