@@ -349,8 +349,10 @@ GMAIL_APP_PASSWORD=password
 
 1. **Portainer via Traefik (HTTPS):**
 
+Portainer can be served securely over HTTPS now that Traefik is set up, paste these commands:
    ```bash
    docker stop portainer && docker rm portainer
+  
    docker run -d --name portainer -p 1200:9000 \
      --restart always --network server_default \
      -v /var/run/docker.sock:/var/run/docker.sock \
@@ -363,17 +365,19 @@ GMAIL_APP_PASSWORD=password
      portainer/portainer-ce:lts
    ```
 
-2. **Tailscale Admin:** disable key expiry, approve subnet routes.
+2. **Tailscale Admin:** disable key expiry for your devices, and approve subnet routes so you can connect to any device on your home network remotely, not just your server..
 
-3. **Pi-hole UI:** visit `ph.${DOMAIN}`, block domains.
+3. **Pi-hole UI:** visit `ph.${DOMAIN}`, and optionally block any extra domains.
 
-4. **Vaultwarden:** uncomment `ADMIN_TOKEN`, set `SIGNUPS_ALLOWED=true`, visit `vw.${DOMAIN}`, create account, then revert settings and remove token:
+4. **Vaultwarden:** uncomment `ADMIN_TOKEN`, set `SIGNUPS_ALLOWED=true`, visit `vw.${DOMAIN}`, create account, then revert settings and remove token to disable the admin panel again:
 
    ```bash
    sed -i '/"admin_token":/d' /data/config.json
    ```
 
 5. **Samba Permissions:**
+
+In order to be able to write to the Samba shares, the permissions should be changed.
 
    ```bash
    sudo useradd username1 && sudo useradd username2
