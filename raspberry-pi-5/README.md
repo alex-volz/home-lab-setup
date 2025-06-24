@@ -21,7 +21,7 @@ Here’s an overview of the services included in this stack:
 ## Prerequisites
 
 * **Raspberry Pi 5** (8 GB or more RAM model recommended)
-* **32 GB or larger** SD card *(or NVMe SSD + HAT)* for the OS
+* **32 GB or larger** SD card *(or preferably an NVMe SSD + HAT)* for the OS
 * A Mac/Windows/Linux machine with [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
 * Your own **domain** (this guide uses Cloudflare DNS; adapt as needed)
 
@@ -29,7 +29,7 @@ Here’s an overview of the services included in this stack:
 
 ### 1. Image the operating system
 
-1. Open **Raspberry Pi Imager**.
+1. Open **Raspberry Pi Imager** on your main system.
 2. **CHOOSE DEVICE**: `Raspberry Pi 5`
 3. **CHOOSE OS**: `Raspberry Pi OS (other) > Raspberry Pi OS Lite (64-bit)`
 4. **CHOOSE STORAGE**: Select your SD card or SSD
@@ -63,7 +63,7 @@ Click **Next** → **Edit Settings**:
   ```
 
   * Press **Enter** to accept default path
-  * *(Optional)* set a passphrase
+  * *(Optional, but recommended)* set a passphrase
 
   Find your public key:
 
@@ -93,7 +93,7 @@ Once in, update and upgrade packages:
 sudo apt update -y && sudo apt upgrade -y
 ```
 
-> **Optional: NVMe HAT performance**
+> **Optional: NVMe HAT performance unlock**
 >
 > 1. ```bash
 >    sudo raspi-config
