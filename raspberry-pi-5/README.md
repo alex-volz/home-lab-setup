@@ -299,7 +299,7 @@ volumes:
   vaultwarden:
 ```
 
-5. Click **Deploy the stack**.
+5. Load the .env file, edit the values, and click **Deploy the stack**.
 
 ---
 
